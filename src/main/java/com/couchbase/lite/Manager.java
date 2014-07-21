@@ -282,6 +282,7 @@ public final class Manager {
 
             database.open();
             database.replaceUUIDs();
+            database.importLastSequence();
         }
         catch (FileNotFoundException e) {
             Log.e(Database.TAG, "", e);

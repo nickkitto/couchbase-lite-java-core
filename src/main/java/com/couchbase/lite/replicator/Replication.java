@@ -1145,7 +1145,7 @@ public abstract class Replication implements NetworkReachabilityListener {
         if (remoteCheckpointDocID != null) {
             return remoteCheckpointDocID;
         } else {
-
+            /*
             // TODO: Needs to be consistent with -hasSameSettingsAs: --
             // TODO: If a.remoteCheckpointID == b.remoteCheckpointID then [a hasSameSettingsAs: b]
 
@@ -1190,9 +1190,11 @@ public abstract class Replication implements NetworkReachabilityListener {
             }
             remoteCheckpointDocID = Misc.TDHexSHA1Digest(inputBytes);
             return remoteCheckpointDocID;
+            */
 
         }
-
+        String input = db.privateUUID() + (!isPull() ? "1" : "0");
+        return Misc.TDHexSHA1Digest(input.getBytes());
     }
 
     @InterfaceAudience.Private
@@ -1228,6 +1230,9 @@ public abstract class Replication implements NetworkReachabilityListener {
                         if (e != null && is404(e)) {
                             Log.d(Log.TAG_SYNC, "%s: 404 error getting remote checkpoint %s, calling maybeCreateRemoteDB", this, remoteCheckpointDocID());
                             maybeCreateRemoteDB();
+                            if (localLastSequence != null) {
+                                lastSequence = localLastSequence;
+                            }
                         }
                         Map<String, Object> response = (Map<String, Object>) result;
                         remoteCheckpoint = response;
@@ -1240,6 +1245,16 @@ public abstract class Replication implements NetworkReachabilityListener {
                             Log.d(Log.TAG_SYNC, "%s: Replicating from lastSequence=%s", this, lastSequence);
                         } else {
                             Log.d(Log.TAG_SYNC, "%s: lastSequence mismatch: I had: %s, remote had: %s", this, localLastSequence, remoteLastSequence);
+                            try {
+                                if (Integer.parseInt(localLastSequence) < Integer.parseInt(remoteLastSequence)) {
+                                    Log.d(Database.TAG, this + ": using " + localLastSequence);
+                                    lastSequence = localLastSequence;
+                                } else {
+                                    Log.d(Database.TAG, this + ": using " + remoteLastSequence);
+                                    lastSequence = remoteLastSequence;
+                                }
+                            } catch (NumberFormatException ignore) {
+                            }
                         }
                         beginReplicating();
                     }

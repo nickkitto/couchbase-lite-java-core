@@ -331,7 +331,7 @@ public final class Database {
             Log.v(Database.TAG, "Deleting JSON of old revisions...");
             ContentValues args = new ContentValues();
             args.put("json", (String)null);
-            database.update("revs", args, "current=0", null);
+            database.update("revs", args, "current=0 AND json IS NOT NULL", null);
         } catch (SQLException e) {
             Log.e(Database.TAG, "Error compacting", e);
             throw new CouchbaseLiteException(Status.INTERNAL_SERVER_ERROR);
@@ -345,13 +345,40 @@ public final class Database {
 
         Log.v(Database.TAG, "Vacuuming SQLite sqliteDb...");
         try {
-            database.execSQL("VACUUM");
+            //database.execSQL("VACUUM");
         } catch (SQLException e) {
             Log.e(Database.TAG, "Error vacuuming sqliteDb", e);
             throw new CouchbaseLiteException(Status.INTERNAL_SERVER_ERROR);
         }
 
 
+    }
+    public boolean importLastSequence() {
+        Cursor cursor = null;
+        String temp = privateUUID() + "0";
+        String pullId = Misc.TDHexSHA1Digest(temp.getBytes());
+        temp = privateUUID() + "1";
+        String pushId = Misc.TDHexSHA1Digest(temp.getBytes());
+        try {
+            cursor = database.rawQuery("SELECT push, MAX(last_sequence) FROM replicators group by push", null);
+            while (cursor.moveToNext()) {
+                int push = cursor.getInt(0);
+                String lastSeq = cursor.getString(1);
+                if (push == 0) {
+                    setLastSequence(lastSeq, pullId, push == 1);
+                } else {
+                    setLastSequence(lastSeq, pushId, push == 1);
+                }
+            }
+        } catch (SQLException e) {
+            Log.e(Database.TAG, "Error importing last sequence", e);
+            return false;
+        } finally {
+            if(cursor != null) {
+                cursor.close();
+            }
+        }
+        return true;
     }
 
 
