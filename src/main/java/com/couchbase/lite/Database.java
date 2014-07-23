@@ -947,6 +947,23 @@ public final class Database {
             return false;
         }
 
+        boolean updateSuccess = checkUpdates();
+        if (!updateSuccess) {
+            return false;
+        }
+
+        try {
+            attachments = new BlobStore(getAttachmentStorePath());
+        } catch (IllegalArgumentException e) {
+            Log.e(Database.TAG, "Could not initialize attachment store", e);
+            database.close();
+            return false;
+        }
+
+        open = true;
+        return true;
+    }
+    public boolean checkUpdates() {
         // Check the user_version number we last stored in the sqliteDb:
         int dbVersion = database.getVersion();
 
@@ -971,7 +988,7 @@ public final class Database {
         if (dbVersion < 2) {
             // Version 2: added attachments.revpos
             String upgradeSql = "ALTER TABLE attachments ADD COLUMN revpos INTEGER DEFAULT 0; " +
-                                "PRAGMA user_version = 2";
+                    "PRAGMA user_version = 2";
             if(!initialize(upgradeSql)) {
                 database.close();
                 return false;
@@ -1086,18 +1103,13 @@ public final class Database {
                 database.close();
                 return false;
             }
+            dbVersion = 11;
         }
 
-
-        try {
-            attachments = new BlobStore(getAttachmentStorePath());
-        } catch (IllegalArgumentException e) {
-            Log.e(Database.TAG, "Could not initialize attachment store", e);
-            database.close();
-            return false;
-        }
-
-        open = true;
+        String upgradeSql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_maps_view_sequence ON maps (sequence, view_id); " +
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_revs_seq_parent ON revs (sequence, parent); " +
+                "PRAGMA user_version = 11";
+        initialize(upgradeSql);
         return true;
     }
 

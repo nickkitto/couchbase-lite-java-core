@@ -407,13 +407,27 @@ public final class View {
             } else {
                 // Delete all obsolete map results (ones from since-replaced
                 // revisions):
-                String[] args = { Integer.toString(getViewId()),
+                String[] args = {
                         Long.toString(lastSequence),
                         Long.toString(lastSequence) };
-                database.getDatabase().execSQL(
+                Log.d(Log.TAG_VIEW, "Before Del" + getViewId());
+                cursor = database.getDatabase().rawQuery(
+                        "SELECT parent FROM revs WHERE sequence>? "
+                                + "AND parent>0 AND parent<=?", args);
+                while (cursor.moveToNext()) {
+                    String[] args2 = { Integer.toString(getViewId()), Long.toString(cursor.getLong(0)) };
+                    database.getDatabase().execSQL("DELETE FROM maps WHERE view_id=? AND sequence = ?", args2);
+                }
+                /**
+                 String[] args = { Integer.toString(getViewId()),
+                     Long.toString(lastSequence),
+                     Long.toString(lastSequence) };
+                 database.getDatabase().execSQL(
                         "DELETE FROM maps WHERE view_id=? AND sequence IN ("
                                 + "SELECT parent FROM revs WHERE sequence>? "
-                                + "AND parent>0 AND parent<=?)", args);
+                                + "AND parent>0 AND parent<=?)", args);*/
+                Log.d(Log.TAG_VIEW, "After Del" + getViewId());
+
             }
 
             int deleted = 0;
