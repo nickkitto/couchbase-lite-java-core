@@ -1108,7 +1108,7 @@ public final class Database {
 
         String upgradeSql = "CREATE UNIQUE INDEX IF NOT EXISTS idx_maps_view_sequence ON maps (sequence, view_id); " +
                 "CREATE UNIQUE INDEX IF NOT EXISTS idx_revs_seq_parent ON revs (sequence, parent); " +
-                "PRAGMA user_version = 11";
+                "CREATE INDEX if not exists revs_by_id22 ON revs(doc_id, revid, current, deleted, no_attachments); ";
         initialize(upgradeSql);
         return true;
     }
@@ -1483,7 +1483,9 @@ public final class Database {
                 cursor = database.rawQuery(sql, args);
             }
 
+            Log.v(Database.TAG, "Before");
             if(cursor.moveToNext()) {
+                Log.v(Database.TAG, "After");
                 if(rev == null) {
                     rev = cursor.getString(0);
                 }
